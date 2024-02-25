@@ -1,19 +1,19 @@
 import jwt from 'jsonwebtoken';
 
 const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: 'Unauthorized: Token Missing' });
   }
 
-  jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-    req.user = user;
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    req.user = decoded; // Attach the user object to the request for further use
     next();
-  });
+  } catch (error) {
+    return res.status(401).json({ message: 'Unauthorized: Invalid Token' });
+  }
 };
 
-export default { verifyToken };
+export default verifyToken;

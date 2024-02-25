@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+</head>
+<body>
+    <h2>Sign Up</h2>
+
+    <form id="signupForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <button type="submit">Sign Up</button>
+    </form>
+
+    <script>
+        const handleSignup = async () => {
+            try {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    window.location.href = '/login';
+                } else {
+                    console.error(data.message);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        };
+
+        const signupForm = document.getElementById('signupForm');
+        signupForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            handleSignup();
+        });
+    </script>
+</body>
+</html>
