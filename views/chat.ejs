@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,61 +75,92 @@
     }
   </style>
 </head>
+
 <body>
 
-<div id="chat-container">
-  <ul id="messages"></ul>
-  <div>
-    <input type="text" id="messageInput" placeholder="Type a message">
-    <input type="file" id="fileInput" multiple>
-    <button onclick="sendMessage()" id="sendButton">Send</button>
+  <div id="chat-container">
+    <ul id="messages"></ul>
+    <div>
+      <input type="text" id="messageInput" placeholder="Type a message">
+      <!-- Add an event listener for the file input change -->
+      <input type="file" id="fileInput" multiple onchange="updateFileList()">
+      <button onclick="sendMessage()" id="sendButton">Send</button>
+    </div>
+    <div id="fileList"></div>
   </div>
-  <div id="fileList"></div>
-</div>
 
-<form method="get" action="/api/auth/logout">
-  <button type="submit">Logout</button>
-</form>
+  <form method="get" action="/api/auth/logout">
+    <button type="submit">Logout</button>
+  </form>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-<script>
-  const socket = io(); // Connect to the Socket.IO server
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script>
+      const token = JSON.parse(unescape('<%- JSON.stringify(token) %>'));
+      const receiver_id = '<%= receiver_id %>';
 
-  // Listen for 'newMessage' events from the server
-  socket.on('newMessage', (data) => {
-    const messagesList = document.getElementById('messages');
-    const li = document.createElement('li');
-    li.textContent = `${data.message.sender_id}: ${data.message.message}`;
-    messagesList.appendChild(li);
+if (token) {
+  // console.log('Token value:', token);
+  const socket = io({
+          auth: {
+            token: token,
+          },
+        });// Connect to the Socket.IO server
 
-    updateFileList(data.message.file_upload);
-  });
-
-  // Function to send a message to the server
-  function sendMessage() {
-    const messageInput = document.getElementById('messageInput');
-    const fileInput = document.getElementById('fileInput');
-    const message = messageInput.value;
-
-    // Emit 'newMessage' event to the server
-    socket.emit('newMessage', { text: message, files: fileInput.files });
-
-    messageInput.value = '';
-    fileInput.value = '';
-  }
-
-  // Update the file list in the UI
-  function updateFileList(files) {
-    const fileList = document.getElementById('fileList');
-    fileList.innerHTML = ''; // Clear existing files
-
-    files.forEach((file) => {
-      const img = document.createElement('img');
-      img.src = `/uploads/${file}`;
-      fileList.appendChild(img);
+    socket.on('connect', () => {
+      console.log('Connected to Socket.IO:', socket.id);
     });
-  }
-</script>
+
+    // Listen for 'newMessage' events from the server
+    socket.on('newMessage', (data) => {
+      console.log('Received new message from server:', data);
+      const messagesList = document.getElementById('messages');
+      const li = document.createElement('li');
+      li.textContent = `${data.message.sender_id}: ${data.message.message}`;
+      messagesList.appendChild(li);
+
+      updateFileList(data.message.file_upload);
+    });
+
+    // Function to send a message to the server
+    function sendMessage() {
+      console.log('Sending message...');
+      const messageInput = document.getElementById('messageInput');
+      const fileInput = document.getElementById('fileInput');
+      const message = messageInput.value;
+
+      // Use spread operator to convert FileList to an array
+      const files = [...fileInput.files];
+
+      // Emit 'newMessage' event to the server
+      socket.emit('newMessage', { text: message, files, receiver_id: receiver_id });
+
+      messageInput.value = '';
+      fileInput.value = '';
+    }
+
+    // Update the file list in the UI
+    function updateFileList() {
+      const fileInput = document.getElementById('fileInput');
+      const fileList = document.getElementById('fileList');
+      fileList.innerHTML = '';
+
+      // Display selected files
+      [...fileInput.files].forEach(file => {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.style.maxWidth = '50px';
+        img.style.maxHeight = '50px';
+        img.style.margin = '5px';
+        fileList.appendChild(img);
+      });
+    }
+  } else {
+      console.log('Token is not defined.');
+    }
+  
+
+  </script>
 
 </body>
+
 </html>

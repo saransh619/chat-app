@@ -11,8 +11,9 @@ import combinedRoutes from "./routes/index.js";
 import { fileURLToPath } from 'url';
 
 import chatController from './controllers/chatController.js';
-import verifyToken from './middlewares/authMiddleware.js';
 import router from './routes/authRoutes.js';
+import verifyToken from './middlewares/authMiddleware.js';
+import socketMiddleware from './middlewares/socketMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,14 +47,16 @@ app.get('/', (req, res) => {
 app.set('view engine', 'ejs');  
 app.set('views', path.join(__dirname, 'views'));
 
-// Socket.IO connection handling
-io.use(verifyToken);
+app.use(verifyToken)
+
+io.use(socketMiddleware);
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('User connected:', socket.id, socket.userData);
 
   // Listen for 'newMessage' events from clients
   socket.on('newMessage', (data) => {
+    console.log('Received new message:', data);
     chatController.sendMessage(io, socket, data);
   });
 

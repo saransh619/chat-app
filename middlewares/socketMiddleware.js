@@ -1,23 +1,26 @@
 import jwt from 'jsonwebtoken';
 
-const socketMiddleware = (io) => {
-  io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+const socketMiddleware = (socket, next) => {
+  // Extract token from socket handshake query
+  const token = socket.handshake.auth.token;
+  console.log("token", token);
 
-    if (!token) {
-      return next(new Error('Authentication error'));
-    }
+  if (!token) {
+    // If no token is provided, reject the connection
+    return next(new Error('Unauthorized: Token Missing'));
+  }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-      if (err) {
-        return next(new Error('Authentication error'));
-      }
-
-      // Attach user information to the socket object
-      socket.user = decoded.user;
-      next();
-    });
-  });
+  try {
+    // Verify the token and attach user information to the socket
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    socket.userData = decoded;
+        // Set receiver_id in socket data
+        socket.receiver_id = decoded?.receiver_id;
+    next();
+  } catch (error) {
+    // If token verification fails, reject the connection
+    return next(new Error('Unauthorized: Invalid Token'));
+  }
 };
 
 export default socketMiddleware;

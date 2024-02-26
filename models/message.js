@@ -2,11 +2,13 @@ import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
   sender_id: {
-    type: Object,
+    // type: mongoose.Schema.Types.ObjectId,
+    type: String,
     required: true
   },
   receiver_id: {
-    type: Object,
+    // type: mongoose.Schema.Types.ObjectId,
+    type: String,
     required: true
   },
   message: {
@@ -15,13 +17,13 @@ const messageSchema = new mongoose.Schema({
   },
   file_upload: [
     {
-      type: Object
+      type: String
     }
   ],
 },
-  {
-    timestamps: true
-  });
+{
+  timestamps: true
+});
 
 const Message = mongoose.model('Message', messageSchema);
 

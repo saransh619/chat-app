@@ -7,38 +7,51 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const index = (req, res) => {
-  res.render('chat');
+  const token = req.user?.token;
+  const receiver_id = req.user?.userId
+  console.log("receiver_id check", receiver_id);
+  res.render('chat', { token, receiver_id });
 };
 
 const sendMessage = async (io, socket, data) => {
+  console.log("data is", data);
   try {
-    const senderId = socket.user?.userId;
-    const { receiver, text } = data;
 
-    const newMessage = new Message({
-      sender_id: senderId,
-      receiver_id: receiver,
-      message: text,
-      file_upload: data.files?.map(file => file.filename) || [],
-    });
-
-    await newMessage.save();
-
-    // Find the receiver's socket by their user ID
-    const receiverSocket = Object.values(io.sockets.sockets).find(
-      (sock) => sock.user?.userId === receiver
-    );
-
-    if (receiverSocket) {
-      receiverSocket.emit('newMessage', { message: newMessage });
+    // Extract necessary data from the socket
+    const sender_id = socket.userData?.userId;
+    const { receiver_id, text, files } = data;
+    console.log("receiver_id", receiver_id);
+    console.log("text", text);
+    console.log("files", files);
+    
+    // Validate required fields
+    if (!sender_id || !receiver_id || !text) {
+      console.warn('SenderId, ReceiverId, and Message are required');
+      return;
     }
 
-    // Emit a message back to the sender
-    socket.emit('messageSent', { message: newMessage });
+    // Create a new message
+    const newMessage = new Message({
+      sender_id,
+      receiver_id,
+      message: text,
+      file_upload: files?.map(file => file.filename) || [],
+    });
 
+    // Save the message to the database
+    const savedMessage = await newMessage.save();
+
+    // Broadcast the message to connected clients
+    io.emit('newMessage', { message: savedMessage });
+
+    // Emit the message to the specified receiver, if online
+    const receiverSocket = io.sockets.sockets.get(receiver_id);
+    console.log("receiverSocket", receiverSocket);
+    if (receiverSocket) {
+      io.to(receiverSocket.id).emit('newMessage', { message: savedMessage });
+    }
   } catch (error) {
-    console.error(error);
-    socket.emit('error', { message: 'Internal server error' });
+    console.error('Error sending message:', error);
   }
 };
 
